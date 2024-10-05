@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movable 3D Cube</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <!-- Подключение Three.js и OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        let scene, camera, renderer, cube, controls, raycaster, mouse, isDragging = false, dragOffset;
+
+        // Инициализация сцены
+        function init() {
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Создаем куб
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            // Добавляем освещение
+            const light = new THREE.PointLight(0xffffff, 1);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+
+            // Добавляем OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+            // Raycaster и объект для отслеживания положения мыши
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Обработчики событий мыши
+            document.addEventListener('mousedown', onMouseDown);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            // Обновление рендера при изменении размера окна
+            window.addEventListener('resize', onWindowResize);
+
+            // Запуск анимации
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Функция обработки нажатия мыши
+        function onMouseDown(event) {
+            // Определяем положение мыши в нормализованных координатах
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Запускаем Raycaster, чтобы определить, был ли куб выбран
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(cube);
+
+            if (intersects.length > 0) {
+                isDragging = true;  // Активируем режим перемещения
+                dragOffset = intersects[0].point.sub(cube.position); // Запоминаем смещение
+            }
+        }
+
+        // Функция перемещения куба при перемещении мыши
+        function onMouseMove(event) {
+            if (isDragging) {
+                // Обновляем положение мыши
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                // Применяем Raycaster для перемещения куба
+                raycaster.setFromCamera(mouse, camera);
+                const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+                const intersectionPoint = new THREE.Vector3();
+
+                raycaster.ray.intersectPlane(plane, intersectionPoint);
+                cube.position.copy(intersectionPoint.sub(dragOffset));
+            }
+        }
+
+        // Функция завершения перемещения
+        function onMouseUp() {
+            isDragging = false;
+        }
+
+        // Функция анимации сцены
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Запуск инициализации сцены при загрузке страницы
+        init();
+    </script>
+
+</body>
+</html>
